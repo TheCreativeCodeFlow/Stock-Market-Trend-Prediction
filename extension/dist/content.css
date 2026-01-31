@@ -1,0 +1,46 @@
+/* Content script styles - injected into TradingView */
+
+/* These styles are primarily handled inline in overlayRenderer.ts
+   This file provides fallback styles and animations */
+
+#ai-copilot-overlay {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.ai-copilot-trend-arrow {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.ai-copilot-insight-panel {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Ensure overlay is above TradingView elements */
+#ai-copilot-overlay * {
+    font-family: inherit;
+    box-sizing: border-box;
+}
