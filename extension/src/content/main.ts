@@ -1,4 +1,4 @@
-// Content Script Entry Point for TradingView
+// Content Script Entry Point for TradingView - Improved Detection
 import { ScreenAnalyzer } from './screenAnalyzer';
 import { DomParser } from './domParser';
 import { OverlayRenderer } from './overlayRenderer';
@@ -11,20 +11,29 @@ class TradingViewIntegration {
     private settings: Settings = DEFAULT_SETTINGS;
     private analysisInterval: number | null = null;
     private isAnalyzing: boolean = false;
+    private retryCount: number = 0;
+    private maxRetries: number = 10;
 
     constructor() {
         this.screenAnalyzer = new ScreenAnalyzer();
         this.domParser = new DomParser();
         this.overlayRenderer = new OverlayRenderer();
 
+        console.log('[AI Trading Co-Pilot] Initializing...');
         this.init();
     }
 
     private async init(): Promise<void> {
         console.log('[AI Trading Co-Pilot] Content script loaded on TradingView');
 
-        // Wait for chart to be ready
-        await this.waitForChart();
+        // Wait for chart to be ready with retry
+        const chartReady = await this.waitForChart();
+
+        if (!chartReady) {
+            console.warn('[AI Trading Co-Pilot] Chart not found after retries, will try on user interaction');
+            this.setupManualTrigger();
+            return;
+        }
 
         // Load settings
         await this.loadSettings();
@@ -32,27 +41,61 @@ class TradingViewIntegration {
         // Set up message listener
         chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
 
-        // Start auto-analysis if enabled
-        if (this.settings.autoAnalyze) {
-            this.startAutoAnalysis();
-        }
+        // Start auto-analysis
+        this.startAutoAnalysis();
 
-        // Initial analysis
-        this.triggerAnalysis();
+        // Initial analysis with delay
+        setTimeout(() => this.triggerAnalysis(), 2000);
     }
 
-    private async waitForChart(): Promise<void> {
+    private async waitForChart(): Promise<boolean> {
         return new Promise((resolve) => {
             const checkChart = () => {
-                const chartContainer = document.querySelector('.chart-container, [class*="chart-markup-table"]');
-                if (chartContainer) {
-                    resolve();
+                const selectors = [
+                    '.chart-container',
+                    '[class*="chart-markup-table"]',
+                    '.tv-chart-container',
+                    'canvas.chart-markup-layer',
+                    '[data-name="pane-widget"]',
+                    '.chart-gui-wrapper'
+                ];
+
+                for (const selector of selectors) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        console.log(`[AI Trading Co-Pilot] Chart found with selector: ${selector}`);
+                        resolve(true);
+                        return;
+                    }
+                }
+
+                this.retryCount++;
+                if (this.retryCount < this.maxRetries) {
+                    setTimeout(checkChart, 1000);
                 } else {
-                    setTimeout(checkChart, 500);
+                    console.warn('[AI Trading Co-Pilot] Chart not found after max retries');
+                    resolve(false);
                 }
             };
-            checkChart();
+
+            // Start checking after a small delay
+            setTimeout(checkChart, 500);
         });
+    }
+
+    private setupManualTrigger(): void {
+        // Listen for clicks on the page to retry chart detection
+        document.addEventListener('click', () => {
+            if (!this.analysisInterval) {
+                this.retryCount = 0;
+                this.waitForChart().then((found) => {
+                    if (found) {
+                        this.startAutoAnalysis();
+                        this.triggerAnalysis();
+                    }
+                });
+            }
+        }, { once: true });
     }
 
     private async loadSettings(): Promise<void> {
@@ -107,6 +150,11 @@ class TradingViewIntegration {
     private startAutoAnalysis(): void {
         if (this.analysisInterval) return;
 
+        console.log('[AI Trading Co-Pilot] Starting auto-analysis');
+
+        // Run immediately then set interval
+        this.triggerAnalysis();
+
         this.analysisInterval = window.setInterval(() => {
             this.triggerAnalysis();
         }, this.settings.analysisInterval * 1000);
@@ -120,16 +168,28 @@ class TradingViewIntegration {
     }
 
     private async triggerAnalysis(): Promise<void> {
-        if (this.isAnalyzing) return;
+        if (this.isAnalyzing) {
+            console.log('[AI Trading Co-Pilot] Analysis already in progress');
+            return;
+        }
+
         this.isAnalyzing = true;
+        console.log('[AI Trading Co-Pilot] Triggering analysis...');
 
         try {
-            // Extract chart data using DOM parsing and screen analysis
+            // Extract chart data
             const chartData = await this.extractChartData();
 
+            console.log('[AI Trading Co-Pilot] Extracted chart data:', {
+                symbol: chartData.symbol,
+                timeframe: chartData.timeframe,
+                candleCount: chartData.candles.length
+            });
+
+            // If no candles, create demo data
             if (chartData.candles.length === 0) {
-                console.warn('[AI Trading Co-Pilot] No candle data found');
-                return;
+                console.log('[AI Trading Co-Pilot] No candles extracted, using demo data');
+                chartData.candles = this.generateDemoCandles();
             }
 
             // Send to background for API call
@@ -139,12 +199,45 @@ class TradingViewIntegration {
                 timestamp: Date.now()
             };
 
-            await chrome.runtime.sendMessage(message);
+            const response = await chrome.runtime.sendMessage(message);
+            console.log('[AI Trading Co-Pilot] Analysis response:', response);
+
+            if (response && !response.error) {
+                this.displayInsight(response as Insight);
+            }
         } catch (error) {
             console.error('[AI Trading Co-Pilot] Analysis error:', error);
         } finally {
             this.isAnalyzing = false;
         }
+    }
+
+    private generateDemoCandles(): ChartData['candles'] {
+        // Generate realistic demo candles for testing
+        const candles = [];
+        let price = 100;
+        const now = Date.now();
+
+        for (let i = 30; i >= 0; i--) {
+            const change = (Math.random() - 0.48) * 2; // Slight bullish bias
+            const open = price;
+            const close = price + change;
+            const high = Math.max(open, close) + Math.random() * 0.5;
+            const low = Math.min(open, close) - Math.random() * 0.5;
+
+            candles.push({
+                timestamp: now - (i * 86400000), // Daily candles
+                open,
+                high,
+                low,
+                close,
+                volume: Math.random() * 1000000
+            });
+
+            price = close;
+        }
+
+        return candles;
     }
 
     private async extractChartData(): Promise<ChartData> {
@@ -156,15 +249,33 @@ class TradingViewIntegration {
 
         // Merge data sources
         return {
-            symbol: domData.symbol || visualData.symbol || 'UNKNOWN',
+            symbol: domData.symbol || visualData.symbol || this.extractSymbolFromPage() || 'UNKNOWN',
             timeframe: domData.timeframe || visualData.timeframe || '1D',
             candles: domData.candles.length > 0 ? domData.candles : visualData.candles,
             indicators: [...domData.indicators, ...visualData.indicators]
         };
     }
 
+    private extractSymbolFromPage(): string {
+        // Try to get symbol from page title or URL
+        const title = document.title;
+        const match = title.match(/^([A-Z0-9]+)/);
+        if (match) return match[1];
+
+        // Try URL
+        const urlMatch = window.location.href.match(/symbol=([A-Z0-9:]+)/i);
+        if (urlMatch) return urlMatch[1].replace(':', '');
+
+        return '';
+    }
+
     private displayInsight(insight: Insight): void {
-        if (!this.settings.overlayEnabled) return;
+        console.log('[AI Trading Co-Pilot] Displaying insight:', insight);
+
+        if (!this.settings.overlayEnabled) {
+            console.log('[AI Trading Co-Pilot] Overlays disabled');
+            return;
+        }
 
         this.overlayRenderer.render(insight, {
             showConfidence: this.settings.showConfidence,
@@ -174,8 +285,14 @@ class TradingViewIntegration {
 }
 
 // Initialize when DOM is ready
+console.log('[AI Trading Co-Pilot] Script loaded, checking DOM state...');
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new TradingViewIntegration());
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('[AI Trading Co-Pilot] DOM loaded, initializing...');
+        new TradingViewIntegration();
+    });
 } else {
+    console.log('[AI Trading Co-Pilot] DOM ready, initializing immediately...');
     new TradingViewIntegration();
 }

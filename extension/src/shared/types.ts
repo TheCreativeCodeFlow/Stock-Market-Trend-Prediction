@@ -84,6 +84,7 @@ export interface ExtensionMessage<T = unknown> {
 
 export interface Settings {
     apiEndpoint: string;
+    geminiApiKey: string;
     autoAnalyze: boolean;
     overlayEnabled: boolean;
     showConfidence: boolean;
@@ -93,6 +94,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
     apiEndpoint: 'http://localhost:8000',
+    geminiApiKey: '',
     autoAnalyze: true,
     overlayEnabled: true,
     showConfidence: true,

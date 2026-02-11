@@ -45,7 +45,8 @@ async def predict_next_candle(request: ChartDataRequest):
         explanation = await explanation_gen.generate(
             symbol=request.symbol,
             prediction=prediction_result,
-            technical=tech_analysis
+            technical=tech_analysis,
+            api_key=request.gemini_api_key
         )
         
         # Assess risk level

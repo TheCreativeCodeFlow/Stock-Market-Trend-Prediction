@@ -27,7 +27,8 @@ class ExplanationGenerator:
         symbol: str,
         prediction: Dict[str, Any],
         technical: Dict[str, Any],
-        sentiment: Optional[Dict[str, Any]] = None
+        sentiment: Optional[Dict[str, Any]] = None,
+        api_key: Optional[str] = None
     ) -> str:
         """
         Generate explanation for the prediction.
@@ -37,14 +38,18 @@ class ExplanationGenerator:
             prediction: ML prediction result
             technical: Technical indicators
             sentiment: Optional news sentiment
+            api_key: Optional Gemini API key (overrides env var)
             
         Returns:
             Human-readable explanation string
         """
+        # Use provided API key or fall back to env variable
+        effective_api_key = api_key or self.api_key
+        
         # If API key available, use Gemini
-        if self.api_key:
+        if effective_api_key:
             return await self._generate_with_gemini(
-                symbol, prediction, technical, sentiment
+                symbol, prediction, technical, sentiment, effective_api_key
             )
         
         # Fallback to rule-based explanation
@@ -55,12 +60,13 @@ class ExplanationGenerator:
         symbol: str,
         prediction: Dict[str, Any],
         technical: Dict[str, Any],
-        sentiment: Optional[Dict[str, Any]]
+        sentiment: Optional[Dict[str, Any]],
+        api_key: str
     ) -> str:
         """Generate explanation using Gemini API."""
         try:
             import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
+            genai.configure(api_key=api_key)
             model = genai.GenerativeModel(self.model_name)
             
             prompt = self._build_prompt(symbol, prediction, technical, sentiment)
@@ -68,6 +74,7 @@ class ExplanationGenerator:
             
             return response.text
         except Exception as e:
+            print(f"Gemini API error: {e}")
             # Fallback on error
             return self._generate_rule_based(symbol, prediction, technical, sentiment)
     

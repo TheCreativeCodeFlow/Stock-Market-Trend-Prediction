@@ -40,6 +40,7 @@ module.exports = {
             patterns: [
                 { from: 'manifest.json', to: 'manifest.json' },
                 { from: 'src/popup/popup.html', to: 'popup.html' },
+                { from: 'src/popup/popup-script.js', to: 'popup-script.js' },
                 { from: 'src/content/content.css', to: 'content.css' },
                 { from: 'public/icons', to: 'icons', noErrorOnMissing: true }
             ]

@@ -1,6 +1,6 @@
 # Pydantic schemas for API requests and responses
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Literal
+from typing import List, Optional, Dict, Literal, Union, Any
 from datetime import datetime
 
 
@@ -27,6 +27,7 @@ class ChartDataRequest(BaseModel):
     timeframe: str = Field(default="1D", description="Chart timeframe")
     candles: List[Candle] = Field(..., description="Historical candle data")
     indicators: List[IndicatorData] = Field(default_factory=list)
+    gemini_api_key: Optional[str] = Field(default=None, description="Gemini API key for AI explanations")
 
 
 class Prediction(BaseModel):
@@ -46,7 +47,7 @@ class TechnicalAnalysis(BaseModel):
     macd: Optional[Dict[str, float]] = None
     ema: Optional[Dict[int, float]] = None
     sma: Optional[Dict[int, float]] = None
-    volume_analysis: Optional[Dict[str, any]] = None
+    volume_analysis: Optional[Dict[str, Union[str, float, int]]] = None
 
 
 class NewsSentiment(BaseModel):

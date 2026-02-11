@@ -347,11 +347,11 @@
   transition: transform 0.2s ease;
 }
 
-.setting-toggle input:checked + .toggle-slider {
+.setting-toggle input:checked+.toggle-slider {
   background: linear-gradient(135deg, #60a5fa, #a78bfa);
 }
 
-.setting-toggle input:checked + .toggle-slider::after {
+.setting-toggle input:checked+.toggle-slider::after {
   transform: translateX(18px);
 }
 
@@ -364,4 +364,99 @@
   font-size: 10px;
   color: #606070;
   border-top: 1px solid rgba(100, 100, 150, 0.2);
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  gap: 16px;
+  color: #808090;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(100, 100, 150, 0.2);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  gap: 16px;
+  padding: 20px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+}
+
+.error-text {
+  font-size: 14px;
+  color: #ef4444;
+}
+
+.retry-btn {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.retry-btn:hover {
+  opacity: 0.9;
+}
+
+/* Demo Badge */
+.status-badge.demo {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+/* Demo Notice */
+.demo-notice {
+  margin-top: 16px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  font-size: 11px;
+  color: #f59e0b;
+}
+
+/* Warnings Card */
+.warnings-card {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.warning-item {
+  font-size: 12px;
+  color: #ef4444;
+  padding: 4px 0;
 }

@@ -31,19 +31,30 @@ class BackgroundService {
         sender: chrome.runtime.MessageSender,
         sendResponse: (response: unknown) => void
     ): boolean {
+        console.log('[AI Trading Co-Pilot] Background received message:', message.type);
+
         switch (message.type) {
             case 'ANALYZE_CHART':
                 this.analyzeChart(message.payload as ChartData)
-                    .then(sendResponse)
-                    .catch((error) => sendResponse({ error: error.message }));
+                    .then((insight) => {
+                        console.log('[AI Trading Co-Pilot] Analysis complete:', insight);
+                        sendResponse(insight);
+                    })
+                    .catch((error) => {
+                        console.error('[AI Trading Co-Pilot] Analysis error:', error);
+                        sendResponse({ error: error.message });
+                    });
                 return true; // Keep channel open for async response
 
             case 'GET_STATUS':
-                sendResponse({
+                const status = {
                     connected: this.apiClient.isConnected(),
+                    demoMode: this.apiClient.isDemoMode(),
                     lastInsight: this.lastInsight,
                     settings: this.settings
-                });
+                };
+                console.log('[AI Trading Co-Pilot] Status request:', status);
+                sendResponse(status);
                 return false;
 
             case 'SETTINGS_UPDATE':
@@ -57,8 +68,11 @@ class BackgroundService {
     }
 
     private async analyzeChart(chartData: ChartData): Promise<Insight> {
+        console.log('[AI Trading Co-Pilot] Analyzing chart:', chartData.symbol);
+
         try {
-            const insight = await this.apiClient.analyze(chartData);
+            // Pass Gemini API key from settings if available
+            const insight = await this.apiClient.analyze(chartData, this.settings.geminiApiKey);
             this.lastInsight = insight;
 
             // Notify content script of new prediction
